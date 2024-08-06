@@ -1,55 +1,95 @@
+const mongoose = require('mongoose');
 const Article = require('../models/article');
-
+const Category = require('../models/category');
 module.exports = {
-    getAllArticels: (req,res)=>{
-        res.status(200).json({
-            message: 'Get All Articels' 
-        })
-    
+    getAllArticles: (req, res) => {
+        Article.find().populate('categoryId', 'title').then((articles) => {
+            res.status(200).json({
+                articles
+            })
+        }).catch(error => {
+            res.status(500).json({
+                error
+            })
+        });
     },
-    createArticle:(req,res)=>{
-        const {title,description,content} = req.body;
-
-        const article = new Article();
-        res.status(200).json({
-            message: 'Create a new article' 
-        })
+    createArticle: (req, res) => {
+        const { title, description, content, categoryId } = req.body;
     
+        Category.findById(categoryId)
+            .then((category) => {
+                if (!category) {
+                    return res.status(404).json({
+                        message: 'Category Not Found'
+                    });
+                }
+    
+                const article = new Article({
+                    _id: new mongoose.Types.ObjectId(),
+                    title,
+                    description,
+                    content,
+                    categoryId
+                });
+    
+                return article.save();
+            })
+            .then(() => {
+                res.status(200).json({ 
+                    message: 'Created article'
+                });
+            })
+            .catch(error => {
+                res.status(500).json({
+                    error
+                });
+            });
+    },
+    getArticle: (req, res) => {
+        const articleId = req.params.articleId;
+
+        Article.findById(articleId).then((article) => {
+            res.status(200).json({
+                article
+            })
+        }).catch(error => {
+            res.status(500).json({
+                error
+            })
+        });
     },
     updateArticle: (req, res) => {
-        const articleId = req.params.articleId;
-    
-        // בדיקה האם האיידי של המאמר קיים בפרמטרים
-        if (!articleId) {
-            return res.status(400).json({
-                message: "Article ID is required"
-            });
-        }
-    
-        // טפל בעדכון המאמר כאן
-        // לדוגמה, אפשר להוסיף לוגיקה לעדכון המאמר במסד נתונים
-    
-        res.status(200).json({
-            message: `Update article - ${articleId}`
+        const articleId = req.params.articleId
+
+        Article.update({_id: articleId}, req.body).then(() => {
+            res.status(200).json({
+                message: 'Article Updated'
+            })
+        }).catch(error => {
+            res.status(500).json({
+                error
+            })
         });
     },
     deleteArticle: (req, res) => {
         const articleId = req.params.articleId;
     
-        // בדיקה האם האיידי של המאמר קיים בפרמטרים
-        if (!articleId) {
-            return res.status(400).json({
-                message: "Article ID is required"
+        Article.deleteOne({_id: articleId})
+            .then(result => {
+                if (result.deletedCount === 0) {
+                    return res.status(404).json({
+                        message: `Article _id:${articleId} not found`
+                    });
+                }
+                res.status(200).json({
+                    message: `Article _id:${articleId} Deleted`
+                });
+            })
+            .catch(error => {
+                res.status(500).json({
+                    error
+                });
             });
-        }
-    
-        // טפל במחיקת המאמר כאן
-        // לדוגמה, אפשר להוסיף לוגיקה למחיקת המאמר במסד נתונים
-    
-        res.status(200).json({
-            message: `Delete article - ${articleId}`
-        });
     }
     
-
 }
